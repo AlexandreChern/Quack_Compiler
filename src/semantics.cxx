@@ -318,6 +318,7 @@ class semantics {
             rel_equals.formal_arg_types.push_back("Obj");
             rel_equals.formal_arg_types.push_back("Obj");
             rel_equals.inheritence = "Obj";
+
             obj.methods["EQUALS"] = rel_equals;
             obj.resolved = 1;
             obj.method_list.push_back("STRING");
@@ -336,12 +337,35 @@ class semantics {
             bi_plus.formal_arg_types.push_back("Int");
             AST_hierarchy["Int"].methods["PLUS"] = bi_plus;
 
+            class_and_methods bi_minus("MINUS");
+            bi_minus.return_type = "Int";
+            bi_minus.inheritence = "Int";
+            bi_minus.formal_arg_types.push_back("Int");
+            AST_hierarchy["Int"].methods["MINUS"] = bi_minus;
 
+            class_and_methods bi_times("TIMES");
+            bi_times.return_type = "Int";
+            bi_times.inheritence = "Int";
+            bi_times.formal_arg_types.push_back("Int");
+            AST_hierarchy["Int"].methods["TIMES"] = bi_times;
+
+            class_and_methods bi_divide("DIVIDE");
+            bi_divide.return_type = "Int";
+            bi_divide.inheritence = "Int";
+            bi_divide.formal_arg_types.push_back("Int");
+            AST_hierarchy["Int"].methods["DIVIDE"] = bi_divide;
+ 
             class_and_methods rel_greater(">");
             rel_greater.return_type = "Boolean";
             rel_greater.inheritence = "Int";
             rel_greater.formal_arg_types.push_back("Int");
             AST_hierarchy["Int"].methods[">"] = rel_greater;
+
+            class_and_methods rel_smaller("<");
+            rel_smaller.return_type = "Boolean";
+            rel_smaller.inheritence = "Int";
+            rel_smaller.formal_arg_types.push_back("Int");
+            AST_hierarchy["Int"].methods["<"] = rel_smaller;
 
             AST_Type_Node str("String");
             str.parent_type = "Obj";
