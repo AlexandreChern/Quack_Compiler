@@ -294,6 +294,8 @@ namespace AST {
         ASTNode &cond_; 
         Seq<ASTNode> &truepart_; 
         Seq<ASTNode> &falsepart_; 
+        public:
+
         void gen_rvalue(GenContext* ctx, string target_reg) override;
         
 
@@ -318,7 +320,8 @@ namespace AST {
 
     class While : public Statement {
         ASTNode& cond_; 
-        Seq<ASTNode>&  body_;    
+        Seq<ASTNode>&  body_; 
+        public:   
         explicit While(ASTNode& cond, Block& body) :
             cond_{cond}, body_{body} { };
 
