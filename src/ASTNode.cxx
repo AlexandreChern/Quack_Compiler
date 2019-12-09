@@ -47,12 +47,12 @@ namespace AST {
             if (instance_vars.count(text_)) {return instance_vars[text_];}
             else { return "TypeError";}
         }
-        if (v_table->count(text_)) { 
-            return (*v_table)[text_];
-        }
-        else { 
+        if (!v_table->count(text_)) { 
             cout << "Type Inference Error: Ident" << endl;
             return "TypeError"; 
+        }
+        else { 
+            return (*v_table)[text_];
         }
     }
 
@@ -69,10 +69,10 @@ namespace AST {
         std::string l_id = left_.get_var();
         AST_Type_Node class_node = stc->AST_hierarchy[l_type];
         map<string, string> instance_vars = class_node.instance_vars;
-        if (instance_vars.count(r_id)) {
-            return instance_vars[r_id];
+        if (!instance_vars.count(r_id)) {
+            return "Type Inference Error: Dot";
         }
-        return "Dot:TypeError";
+        return instance_vars[r_id];
     }    
 
      void Dot::gen_rvalue(GenContext *ctx, string target_reg)  {
@@ -135,11 +135,9 @@ namespace AST {
             }
             string actuals = "";
             for (string reg: actualregs) {
-                actuals += reg;
-                actuals += ", ";
+                actuals = actuals + reg + ", ";
             }
-            int strlen = actuals.length();
-            actuals = actuals.erase(strlen - 2, 2); 
+            actuals = actuals.erase(actuals.length() - 2, 2); 
             return actuals;
         }
 
@@ -317,6 +315,34 @@ namespace AST {
             }
     }
 
+    void While::gen_rvalue(GenContext* ctx, std::string target_reg) {
+            string check_statement = ctx->new_branch_label("check_cond");
+            string loop_statement = ctx->new_branch_label("loop");
+            string end_statement = ctx->new_branch_label("endwhile");
+            ctx->emit(check_statement + ": ;");
+            cond_.gen_branch(ctx, loop_statement, end_statement);
+            ctx->emit(loop_statement + ": ;");
+            body_.gen_rvalue(ctx, target_reg);
+            ctx->emit("goto c" + check_statement + ";");
+            ctx->emit(end_statement + ": ;");
+        }
+
+    int While::init_check(set<std::string>* vars){
+            if (cond_.init_check(vars)) {return 1;}
+            set<string>* bodyset = new set<string>(*vars); // copy constructor
+            if (body_.init_check(bodyset)) {return 1;}
+            return 0;
+        }  
+
+    std::string  While::type_inference(semantics* stc,  map<std::string, std::string>* v_table, class_and_method* mtd){
+        std::string cond_type = cond_.type_inference(stc, v_table, mtd);
+        if (cond_type != "Boolean"){
+            std::cout << "Type Inference Error: While" << std::endl;
+        }
+            body_.type_inference(stc,v_table, mtd);
+            return "Nothing";
+    }
+
     std::string Class::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) {
             int returnval = 0;
             map<string, string>* instance_vars = &(stc->AST_hierarchy[mtd->class_name].instance_vars);
@@ -344,25 +370,28 @@ namespace AST {
 
     void Class::gen_rvalue(GenContext* ctx, std::string target_reg) {
                 string class_name = name_.get_var();
-                ctx->emit("struct class_" + class_name + "_struct;");
+                ctx->emit("struct " + class_name + "_struct;");
+                ctx->emit("typedef struct " + class_name + "_struct* " + class_name + ";");
+                ctx->emit("typedef struct obj_" + class_name + "_struct {");
+                
                 ctx->emit("struct obj_" + class_name + ";");
                 ctx->emit("typedef struct obj_" + class_name + "* obj_" + class_name + ";");
-                ctx->emit("typedef struct class_" + class_name + "_struct* class_" + class_name + ";");
+                
                 ctx->emit("");
-                ctx->emit("typedef struct obj_" + class_name + "_struct {");
-                ctx->emit("class_" + class_name + " clazz;");
+                
+                ctx->emit( class_name + " clazz;");
                 ctx->emit_instance_vars();
                 ctx->emit("} * obj_" + class_name + ";");
                 ctx->emit("");
-                ctx->emit("struct class_" + class_name + "_struct the_class_" + class_name + "_struct;");
+                ctx->emit("struct " + class_name + "_struct the_class_" + class_name + "_struct;");
                 ctx->emit("");
-                ctx->emit("struct class_" + class_name + "_struct {");
+                ctx->emit("struct " + class_name + "_struct {");
                 ctx->emit("obj_" + class_name + " (*constructor) (" + ctx->get_formal_argtypes("constructor") + ");");
                 ctx->emit_method_signature(); 
                 ctx->emit("};\n");
                 ctx->emit("extern class_" + class_name + " the_class_" + class_name + ";");
-
                 ctx->emit("");
+
                 GenContext * construct_ctx = new GenContext(*ctx);
                 construct_ctx->method_name = "constructor";
                 constructor_.gen_rvalue(construct_ctx, target_reg);
@@ -394,7 +423,7 @@ namespace AST {
         if (ctx.indent_ > 0) {
             out << endl;
         }
-        for (int i=0; i < ctx.indent_; ++i) {
+        for (int i=0; i < ctx.indent_; i++) {
             out << "    ";
         }
     }

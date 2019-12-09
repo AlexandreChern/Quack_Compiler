@@ -325,32 +325,13 @@ namespace AST {
         explicit While(ASTNode& cond, Block& body) :
             cond_{cond}, body_{body} { };
 
-        void gen_rvalue(GenContext* ctx, std::string target_reg) override {
-            string check_statement = ctx->new_branch_label("check_cond");
-            string loop_statement = ctx->new_branch_label("loop");
-            string end_statement = ctx->new_branch_label("endwhile");
-            ctx->emit(check_statement + ": ;");
-            cond_.gen_branch(ctx, loop_statement, end_statement);
-            ctx->emit(loop_statement + ": ;");
-            body_.gen_rvalue(ctx, target_reg);
-            ctx->emit("goto " + check_statement + ";");
-            ctx->emit(end_statement + ": ;");
-        }
+        void gen_rvalue(GenContext* ctx, std::string target_reg) override;
+        
 
-        string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override {
-            string cond_type = cond_.type_inference(stc, v_table, mtd);
-            if (cond_type != "Boolean") {
-                cout << "TypeError Inference Error: While" << endl;
-            }
-            body_.type_inference(stc, v_table, mtd);
-            return "Nothing";
-        }
-        int init_check(set<std::string>* vars) override {
-            if (cond_.init_check(vars)) {return 1;}
-            set<string>* bodyset = new set<string>(*vars); // copy constructor
-            if (body_.init_check(bodyset)) {return 1;}
-            return 0;
-        }  
+        string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override;
+      
+
+        int init_check(set<std::string>* vars) override;
         void json(ostream& out, AST_print_context& ctx) override;
 
     };
