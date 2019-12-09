@@ -92,13 +92,13 @@ class semantics {
         void topological_sort() {
             classes_resolved.push_back("Obj");
             for(map<string,AST_Type_Node>::iterator iter = AST_hierarchy.begin(); iter != AST_hierarchy.end(); iter++) {
-                AST_Type_Node *node = &AST_hierarchy[iter->first]; // get node directly from map
+                AST_Type_Node *node = &AST_hierarchy[iter->first]; 
                 topological_sort_utils(node);
             }
         }
         void topological_sort_utils(AST_Type_Node* node) {
             if (!node->resolved) {
-                string parent_type = node->parent_type;
+                std::string parent_type = node->parent_type;
                 AST_Type_Node* parent_node = &AST_hierarchy[parent_type];
                 topological_sort_utils(parent_node);
                 classes_resolved.push_back(node->type);
@@ -222,31 +222,27 @@ class semantics {
             }
         }
 
-        int is_subtype(string sub, string super) {
+        int is_subtype(string type_1, string type_2) { // type_1 subtype, type_2 supertype
             set<std::string> path = set<std::string>();
-            std::string type = sub;
+            std::string type = type_1;
+            while (true) {
+                path.insert(type);
+                if (type == "Obj") { break; }
+                type = AST_hierarchy[type].parent_type; // going up though the AST tree
+                if (path.count(type_2)){
+                    cout << "type_1 is a subtype of " << type_2;
+                    return 1; // 
+                }
+            }
             if (!AST_hierarchy.count(type)) { 
                 cout << "ERROR: Type Error" << endl;
                 return 0;
             }
-
-            if (path.count(super)) {
-                return 1;
-            }
-
-            while (true) {
-                path.insert(type);
-                if (type == "Obj") { break; }
-                type = AST_hierarchy[type].parent_type;
-            }
-            
-            return 0;
         }
 
         string Type_LCA(string type_1, string type_2) {
 
-            if (type_1 == "Error" || type_1== "TypeError") { return "TypeError";}
-            if (type_2 == "Error" || type_1 == "TypeError") { return "TypeError";}
+            if (type_1 == "Error" || type_1== "TypeError" || type_2 == "Error" || type_1 == "TypeError") { return "TypeError";}
 
             if (type_1 == type_2){
                 return type_1;
