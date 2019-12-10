@@ -81,15 +81,15 @@ string GenContext::get_local_var(string &ident) {
             vars = classandmethods.vars;
         }
         else if (method_name == "PGM"){
-                vars = &class_node.instance_vars;
+            vars = &class_node.instance_vars;
         }
 
         else{ 
-                classandmethods = class_node.methods[method_name];
-                vars = classandmethods.vars;
+            classandmethods = class_node.methods[method_name];
+            vars = classandmethods.vars;
         }
-        string type = (*vars)[ident];
-        this->emit(string("obj_") + type + " " + internal + ";");
+        std::string var_type = (*vars)[ident];
+        this->emit(string("obj_") + var_type + " " + internal + ";");
         return internal;
     }
     return local_vars[ident];
