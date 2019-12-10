@@ -128,8 +128,8 @@ namespace AST {
      std::string Actuals::gen_lvalue(GenContext *ctx){
             vector<string> actualregs = vector<string>();
             for (ASTNode *actual: elements_) {
-                string type = ctx->get_type(*actual);
-                string reg = ctx->alloc_reg(type);
+                std::string type = ctx->get_type(*actual);
+                std::string reg = ctx->alloc_reg(type);
                 actualregs.push_back(reg);
                 actual->gen_rvalue(ctx, reg);
             }
@@ -181,10 +181,10 @@ namespace AST {
 
             string method_name = method_.get_var();
             string recv_tableype = ctx->get_type(receiver_);
-            string recvreg = ctx->alloc_reg(recv_tableype);
-            receiver_.gen_rvalue(ctx, recvreg);
+            string recv_reg = ctx->alloc_reg(recv_tableype);
+            receiver_.gen_rvalue(ctx, recv_reg);
             string actuals = actuals_.gen_lvalue(ctx);
-            ctx->emit(target_reg + " = " + recvreg + "->clazz->" + method_name + "(" + recvreg + ", " + actuals + ");");
+            ctx->emit(target_reg + " = " + recv_reg + "->clazz->" + method_name + "(" + recv_reg + ", " + actuals + ");");
         }
 
     string AssignDeclare::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd)  {
@@ -329,8 +329,7 @@ namespace AST {
 
     int While::init_check(set<std::string>* vars){
             if (cond_.init_check(vars)) {return 1;}
-            set<string>* bodyset = new set<string>(*vars); // copy constructor
-            if (body_.init_check(bodyset)) {return 1;}
+            if (body_.init_check(new set<std::string>(*vars))) {return 1;}
             return 0;
         }  
 
@@ -339,8 +338,8 @@ namespace AST {
         if (cond_type != "Boolean"){
             std::cout << "Type Inference Error: While" << std::endl;
         }
-            body_.type_inference(stc,v_table, mtd);
-            return "Nothing";
+        body_.type_inference(stc,v_table, mtd);
+        return "Nothing";
     }
 
     std::string Class::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) {
