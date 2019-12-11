@@ -369,24 +369,27 @@ namespace AST {
 
     void Class::gen_rvalue(GenContext* ctx, std::string target_reg) {
                 string class_name = name_.get_var();
-                ctx->emit("struct " + class_name + "_struct;");
-                ctx->emit("typedef struct " + class_name + "_struct* " + class_name + ";");
-                ctx->emit("typedef struct obj_" + class_name + "_struct {");
-                
-                ctx->emit("struct obj_" + class_name + ";");
-                ctx->emit("typedef struct obj_" + class_name + "* obj_" + class_name + ";");
-                
+                ctx->emit("typedef struct class_" + class_name + "_struct* " + class_name + ";");
                 ctx->emit("");
-                
+                ctx->emit("typedef struct obj_" + class_name + "_struct {");
+                ctx->emit("");
+                ctx->emit("typedef struct obj_" + class_name + "* obj_" + class_name + ";");
+                ctx->emit("");
+                ctx->emit("struct class_" + class_name + "_struct;");
+                ctx->emit("struct obj_" + class_name + ";");
+                ctx->emit("");
                 ctx->emit( class_name + " clazz;");
                 ctx->emit_instance_vars();
                 ctx->emit("} * obj_" + class_name + ";");
                 ctx->emit("");
-                ctx->emit("struct " + class_name + "_struct the_class_" + class_name + "_struct;");
+
+                ctx->emit("struct class_" + class_name + "_struct the_class_" + class_name + "_struct;");
                 ctx->emit("");
-                ctx->emit("struct " + class_name + "_struct {");
+
+                ctx->emit("struct class_" + class_name + "_struct {");
                 ctx->emit("obj_" + class_name + " (*constructor) (" + ctx->get_formal_argtypes("constructor") + ");");
-                ctx->emit_method_signature(); 
+                ctx->method_signature(); 
+
                 ctx->emit("};\n");
                 ctx->emit("extern class_" + class_name + " the_class_" + class_name + ";");
                 ctx->emit("");

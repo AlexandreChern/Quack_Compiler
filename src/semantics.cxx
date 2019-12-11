@@ -198,6 +198,7 @@ class semantics {
             }
             return 0;
         }
+        
         void methods_inheritance() {
             for (string class_name: classes_resolved) {
                 if (class_name == "Obj" || class_name == "PGM") {continue;}
@@ -206,8 +207,8 @@ class semantics {
 
                 std::string parent_type = class_node->parent_type;
                 AST_Type_Node *parent_node = &AST_hierarchy[parent_type];
-                for (std::string method: parent_node->method_list) {
-                    class_node->method_list.push_back(method);
+                for (std::string method_name: parent_node->method_list) {
+                    class_node->method_list.push_back(method_name);
                 }
                 for (map<string, class_and_methods>::iterator iter = class_methods->begin(); iter != class_methods->end(); iter++) {
                     if (!method_found(&class_node->method_list, iter->first)) { // iter->first found in class_node->method_list
@@ -243,7 +244,7 @@ class semantics {
 
         std::string Type_LCA(string type_1, string type_2) {
 
-            if (type_1 == "Error" || type_1== "TypeError" || type_2 == "Error" || type_1 == "TypeError") { return "TypeError";}
+            if (type_1== "TypeError" || type_2 == "TypeError") { return "TypeError";}
             if (type_1 == type_2){
                 return type_1;
             }
@@ -258,14 +259,11 @@ class semantics {
                         break; 
                     }
                     type = AST_hierarchy[type].parent_type;
-                }
-                type = type_2;
-                while (true) {
-                    if (type_path.count(type)) {
-                        return type;
+                     if (type_path.count(type_2)) {
+                        return type_2;
                     }
+                }  
                 type = AST_hierarchy[type].parent_type;
-                }
                 return type;
             }
         }
