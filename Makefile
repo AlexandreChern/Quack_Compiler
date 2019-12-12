@@ -12,4 +12,4 @@ clean:
 
 image:
 	(cd src; make clean;)
-	docker build --tag=proj2 .
+	docker build --tag=quack_compiler .

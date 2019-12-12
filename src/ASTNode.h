@@ -231,7 +231,7 @@ namespace AST {
         void get_vars(map<std::string, std::string>* v_table) override {
             std::string var_name = lexpr_.get_var();
             if (var_name.rfind("this", 0) == 0) {
-                (*v_table)[var_name] = "Error";
+                (*v_table)[var_name] = "TypeError";
             }
         }
         string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override;
