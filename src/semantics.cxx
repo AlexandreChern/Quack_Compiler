@@ -80,8 +80,8 @@ class semantics {
         map<string, AST_Edge*> edges;
         vector<std::string> classes_resolved;
 
-        semantics(AST::ASTNode* root) { 
-            AST_root_init = root;
+        semantics(AST::ASTNode* AST_root) { 
+            AST_root_init = AST_root;
             error_detected = 0;
             modified = 1;
             AST_hierarchy = map<string, AST_Type_Node>();
@@ -118,7 +118,7 @@ class semantics {
                     continue;
                 }
                 if (!edges.count(node.parent_type)) {
-                    cout << "Error: " << endl;
+                    cout << "Error: Parent Type Not Found " << endl;
                     return 0;
                 }
                 edges[node.parent_type]->children.push_back(node.type);
@@ -126,67 +126,68 @@ class semantics {
             return 1;
         }
 
-        int is_AST_cyclic(string root) {
-            AST_Edge* root_edge = edges[root];
-            for (string child: root_edge->children) {
+        int is_AST_cyclic(string AST_root) {
+            AST_Edge* AST_root_edge = edges[AST_root];
+            for (std::string child: AST_root_edge->children) {
                 AST_Edge* child_edge = edges[child];
                 if (child_edge->visited || is_AST_cyclic(child)) { 
                     return 1;
+                    std::cout << "Cyclic AST detected" << endl;
                 }
             }
             return 0;
         }
 
         void pop_AST_hierarchy() { 
-            AST::Program *root = (AST::Program*) AST_root_init;
-            AST::Classes classes_node = root->classes_;
+            AST::Program *AST_root = (AST::Program*) AST_root_init;
+            AST::Classes classes_node = AST_root->classes_;
             vector<AST::Class *> classes = classes_node.elements_;
-            for (AST::Class *element: classes) {
-                string class_name = element->name_.text_;
-                AST_Type_Node node;
-                if (AST_hierarchy.count(class_name)) { 
-                    node = AST_hierarchy[class_name]; 
+            for (AST::Class *clazz: classes) {
+                std::string class_name = clazz->name_.text_;
+                AST_Type_Node type_node;
+                if (!AST_hierarchy.count(class_name)) { 
+                    type_node = AST_Type_Node(class_name);
                 }
                 else {
-                    node = AST_Type_Node(class_name);
+                    type_node = AST_hierarchy[class_name]; 
                 }
-                node.parent_type = element->super_.text_; 
+                type_node.parent_type = clazz->super_.text_; 
+                AST::Method *constructor = (AST::Method *) &(clazz->constructor_);
 
-                AST::Method *constructor = (AST::Method *) &(element->constructor_);
                 AST::Ident *returned_type = (AST::Ident*) &(constructor->returns_);
-                node.construct.return_type = returned_type->text_; 
+                type_node.construct.return_type = returned_type->text_; 
+
                 AST::Formals* formals_node = (AST::Formals*) &(constructor->formals_);
-                vector<AST::Formal *> formals = formals_node->elements_;
-                for (AST::Formal *formal: formals) {
-                        AST::Ident *type = (AST::Ident *) &(formal->type_);
-                        node.construct.formal_arg_types.push_back(type->text_); 
-                    }
+                vector<AST::Formal *> formal_list = formals_node->elements_;
+
+                for (AST::Formal *formal: formal_list) {
+                        AST::Ident *var_type = (AST::Ident *) &(formal->type_);
+                       type_node.construct.formal_arg_types.push_back(var_type->text_); 
+                }
 
                 AST::Block* block_node = (AST::Block*) &(constructor->statements_);
-                vector<AST::Statement *> *statements = (vector<AST::Statement *> *) &block_node->elements_;
-                vector<AST::Statement *> stmts = *statements;
+                vector<AST::Statement *> *statement_list = (vector<AST::Statement *> *) &block_node->elements_;
 
-                for (AST::Statement *stmt: stmts) {
-                    stmt->get_vars(&node.instance_vars);
+                for (AST::Statement *statement: *statement_list) {
+                    statement->get_vars(&type_node.instance_vars);
                 } 
 
-                vector<AST::Method *> methods = (element->methods_).elements_;
-                for (AST::Method *method: methods) {
+                vector<AST::Method *> method_list = (clazz->methods_).elements_;
+                for (AST::Method *method: method_list) {
                     AST::Ident* method_name = (AST::Ident*) &(method->name_);
                     AST::Ident* return_type = (AST::Ident*) &(method->returns_);
-                    class_and_methods newmethod(method_name->text_);
-                    newmethod.return_type = return_type->text_;
+                    class_and_methods new_method(method_name->text_);
+                    new_method.return_type = return_type->text_;
                     AST::Formals* formals_node = (AST::Formals*) &(method->formals_);
-                    vector<AST::Formal *> formals = formals_node->elements_;
-                    for (AST::Formal *formal: formals) {
+                    vector<AST::Formal *> formal_list = formals_node->elements_;
+                    for (AST::Formal *formal: formal_list) {
                         AST::Ident *type = (AST::Ident *) &(formal->type_);
-                        newmethod.formal_arg_types.push_back(type->text_);
+                        new_method.formal_arg_types.push_back(type->text_);
                     }
-                    newmethod.inheritence = class_name;
-                    node.methods[newmethod.method_name] = newmethod;
+                    new_method.inheritence = class_name;
+                    type_node.methods[new_method.method_name] = new_method;
                 }
-                AST_hierarchy[class_name] = node; 
-
+                AST_hierarchy[class_name] = type_node; 
             } 
         } 
 
@@ -200,43 +201,46 @@ class semantics {
         }
         
         void methods_inheritance() {
-            for (string class_name: classes_resolved) {
+            for (std::string class_name: classes_resolved) {
                 if (class_name == "Obj" || class_name == "PGM") {continue;}
                 AST_Type_Node *class_node = &AST_hierarchy[class_name];
-                map<string, class_and_methods> *class_methods = &class_node->methods;
+                map<std::string, class_and_methods> *class_methods = &class_node->methods;
 
                 std::string parent_type = class_node->parent_type;
                 AST_Type_Node *parent_node = &AST_hierarchy[parent_type];
                 for (std::string method_name: parent_node->method_list) {
                     class_node->method_list.push_back(method_name);
                 }
-                for (map<string, class_and_methods>::iterator iter = class_methods->begin(); iter != class_methods->end(); iter++) {
+                for (map<std::string, class_and_methods>::iterator iter = class_methods->begin(); iter != class_methods->end(); iter++) {
                     if (!method_found(&class_node->method_list, iter->first)) { // iter->first found in class_node->method_list
                         class_node->method_list.push_back(iter->first); // Add iter->first to the method_list
                     }
                 }
-                for (string s: class_node->method_list) {
-                    if (!class_methods->count(s)) {
-                        class_and_methods parent_method = parent_node->methods[s];
-                        (*class_methods)[s] = class_and_methods(parent_method);
+                for (std::string method: class_node->method_list) {
+                    if (!class_methods->count(method)) {
+                        (*class_methods)[method] = class_and_methods(parent_node->methods[method]);
                     }
                 }
             }
         }
 
         int is_subtype(string type_1, string type_2) { // type_1 subtype, type_2 supertype
-            set<std::string> path = set<std::string>();
-            std::string type = type_1;
+            set<std::string> type_list = set<std::string>();
+            // std::string type = type_1;
+            if (type_1 == "Obj"){
+                return 0;
+            }
+            std::string tmp_type = type_1;
             while (true) {
-                path.insert(type);
-                if (type == "Obj") { break; }
-                type = AST_hierarchy[type].parent_type; // recursively going up though the AST tree
-                if (path.count(type_2)){
+                type_list.insert(tmp_type);
+                if (type_1 == "Obj") { break; return 0;}
+                tmp_type = AST_hierarchy[tmp_type].parent_type; // recursively going up though the AST tree
+                if (type_list.count(type_2)){
                     cout << "type_1 is a subtype of " << type_2;
                     return 1; 
                 }
             }
-            if (!AST_hierarchy.count(type)) { 
+            if (!AST_hierarchy.count(tmp_type)){ 
                 cout << "ERROR: Type Error" << endl;
                 return 0;
             }
@@ -268,14 +272,14 @@ class semantics {
             }
         }
 
-        vector<std::string> split(string Target_String, char delimeter)
+        vector<std::string> split(string Target_String, char delimiter)
         {
             stringstream ss(Target_String);
-            string item;
+            std::string item;
             vector<std::string> Splitted_Strings;
-            while (getline(ss, item, delimeter))
+            while (getline(ss, item, delimiter))
             {
-            Splitted_Strings.push_back(item);
+                Splitted_Strings.push_back(item);
             }
             return Splitted_Strings;
         }
