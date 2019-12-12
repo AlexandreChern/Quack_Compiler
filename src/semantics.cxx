@@ -49,12 +49,12 @@ class AST_Type_Node {
             method_list = vector<std::string>();
         }
 
-        AST_Type_Node(std::string name) {
-            type = name;
+        AST_Type_Node(std::string type_name) {
+            type = type_name;
             instance_vars = map<std::string, std::string>();
             methods = map<std::string, class_and_methods>();
-            construct = class_and_methods(name);
-            construct.return_type = name;
+            construct = class_and_methods(type_name);
+            construct.return_type = type_name;
             resolved = 0;
             method_list = vector<std::string>();
         }
@@ -76,9 +76,9 @@ class semantics {
         AST::ASTNode* AST_root_init;
         int error_detected;
         int modified;
-        map<string, AST_Type_Node> AST_hierarchy;
-        map<string, AST_Edge*> edges;
-        vector<std::string> classes_resolved;
+        map<std::string, AST_Type_Node> AST_hierarchy;
+        map<std::string, AST_Edge*> edges;
+        vector<std::string> resolved_classes;
 
         semantics(AST::ASTNode* AST_root) { 
             AST_root_init = AST_root;
@@ -86,11 +86,11 @@ class semantics {
             modified = 1;
             AST_hierarchy = map<string, AST_Type_Node>();
             edges = map<string, AST_Edge*>();
-            classes_resolved = vector<std::string>();
+            resolved_classes = vector<std::string>();
         }
 
         void topological_sort() {
-            classes_resolved.push_back("Obj");
+            resolved_classes.push_back("Obj");
             for(map<string,AST_Type_Node>::iterator iter = AST_hierarchy.begin(); iter != AST_hierarchy.end(); iter++) {
                 AST_Type_Node *node = &AST_hierarchy[iter->first]; 
                 topological_sort_utils(node);
@@ -101,7 +101,7 @@ class semantics {
                 std::string parent_type = node->parent_type;
                 AST_Type_Node* parent_node = &AST_hierarchy[parent_type];
                 topological_sort_utils(parent_node);
-                classes_resolved.push_back(node->type);
+                resolved_classes.push_back(node->type);
                 node->resolved = 1;
             }
         }
@@ -152,6 +152,7 @@ class semantics {
                     type_node = AST_hierarchy[class_name]; 
                 }
                 type_node.parent_type = clazz->super_.text_; 
+
                 AST::Method *constructor = (AST::Method *) &(clazz->constructor_);
 
                 AST::Ident *returned_type = (AST::Ident*) &(constructor->returns_);
@@ -166,13 +167,15 @@ class semantics {
                 }
 
                 AST::Block* block_node = (AST::Block*) &(constructor->statements_);
-                vector<AST::Statement *> *statement_list = (vector<AST::Statement *> *) &block_node->elements_;
 
+                vector<AST::Statement *> *statement_list = (vector<AST::Statement *> *) &block_node->elements_;
                 for (AST::Statement *statement: *statement_list) {
                     statement->get_vars(&type_node.instance_vars);
                 } 
 
                 vector<AST::Method *> method_list = (clazz->methods_).elements_;
+
+                // construct method
                 for (AST::Method *method: method_list) {
                     AST::Ident* method_name = (AST::Ident*) &(method->name_);
                     AST::Ident* return_type = (AST::Ident*) &(method->returns_);
@@ -201,7 +204,7 @@ class semantics {
         }
         
         void methods_inheritance() {
-            for (std::string class_name: classes_resolved) {
+            for (std::string class_name: resolved_classes) {
                 if (class_name == "Obj" || class_name == "PGM") {continue;}
                 AST_Type_Node *class_node = &AST_hierarchy[class_name];
                 map<std::string, class_and_methods> *class_methods = &class_node->methods;
@@ -226,7 +229,6 @@ class semantics {
 
         int is_subtype(string type_1, string type_2) { // type_1 subtype, type_2 supertype
             set<std::string> type_list = set<std::string>();
-            // std::string type = type_1;
             if (type_1 == "Obj"){
                 return 0;
             }
@@ -246,38 +248,37 @@ class semantics {
             }
         }
 
-        std::string Type_LCA(string type_1, string type_2) {
+        std::string Type_LCA(std::string type_1, std::string type_2) {
 
             if (type_1== "TypeError" || type_2 == "TypeError") { return "TypeError";}
             if (type_1 == type_2){
                 return type_1;
             }
-
             else{
-                std::string type = type_1;
+                std::string tmp_type = type_1;
                 set<std::string> type_path = set<std::string>();
                 while (true) {
-                    type_path.insert(type);
-                    if (type == "Obj") { 
+                    type_path.insert(tmp_type);
+                    if (tmp_type == "Obj") { 
                         cout << "Error: Obj detected " << endl;
                         break; 
                     }
-                    type = AST_hierarchy[type].parent_type;
+                    tmp_type = AST_hierarchy[tmp_type].parent_type;
                      if (type_path.count(type_2)) {
                         return type_2;
                     }
                 }  
-                type = AST_hierarchy[type].parent_type;
-                return type;
+                tmp_type = AST_hierarchy[tmp_type].parent_type;
+                return tmp_type;
             }
         }
 
         vector<std::string> split(string Target_String, char delimiter)
         {
-            stringstream ss(Target_String);
+            std::stringstream str_stream(Target_String);
             std::string item;
             vector<std::string> Splitted_Strings;
-            while (getline(ss, item, delimiter))
+            while (getline(str_stream, item, delimiter))
             {
                 Splitted_Strings.push_back(item);
             }
@@ -300,6 +301,7 @@ class semantics {
 
             AST_Type_Node obj("Obj");
             obj.parent_type = "TYPE_ERROR";
+            obj.resolved = 1;
 
             class_and_methods obj_print("PRINT");
             obj_print.return_type = "Obj";
@@ -319,8 +321,23 @@ class semantics {
             rel_equals.formal_arg_types.push_back("Obj");
             rel_equals.inheritence = "Obj";
 
+            class_and_methods rel_greater(">");
+            rel_greater.return_type = "Boolean";
+            rel_greater.inheritence = "Int";
+            rel_greater.formal_arg_types.push_back("Int");
+            AST_hierarchy["Int"].methods[">"] = rel_greater;
+
+            class_and_methods rel_smaller("<");
+            rel_smaller.return_type = "Boolean";
+            rel_smaller.inheritence = "Int";
+            rel_smaller.formal_arg_types.push_back("Int");
+            AST_hierarchy["Int"].methods["<"] = rel_smaller;
+
             obj.methods["EQUALS"] = rel_equals;
-            obj.resolved = 1;
+            obj.methods[">"] = rel_greater;
+            obj.methods["<"] = rel_smaller;
+
+            
             obj.method_list.push_back("STRING");
             obj.method_list.push_back("PRINT");
             obj.method_list.push_back("EQUALS");
@@ -355,17 +372,7 @@ class semantics {
             bi_divide.formal_arg_types.push_back("Int");
             AST_hierarchy["Int"].methods["DIVIDE"] = bi_divide;
  
-            class_and_methods rel_greater(">");
-            rel_greater.return_type = "Boolean";
-            rel_greater.inheritence = "Int";
-            rel_greater.formal_arg_types.push_back("Int");
-            AST_hierarchy["Int"].methods[">"] = rel_greater;
 
-            class_and_methods rel_smaller("<");
-            rel_smaller.return_type = "Boolean";
-            rel_smaller.inheritence = "Int";
-            rel_smaller.formal_arg_types.push_back("Int");
-            AST_hierarchy["Int"].methods["<"] = rel_smaller;
 
             AST_Type_Node str("String");
             str.parent_type = "Obj";
