@@ -76,13 +76,13 @@ namespace AST {
     }    
 
      void Dot::gen_rvalue(GenContext *ctx, std::string target_reg)  {
-            string var = get_var();
-            string loc = ctx->get_local_var(var);
+            std::string var = get_var();
+            std::string loc = ctx->get_local_var(var);
             ctx->emit(target_reg + " = " + loc + ";");
         }
 
     std::string Dot::gen_lvalue(GenContext *ctx)  {
-            string var = get_var();
+            std::string var = get_var();
             return ctx->get_local_var(var);
         }
 
@@ -110,9 +110,9 @@ namespace AST {
         ident_.type_inference(stc, v_table, mtd);
         class_name_.type_inference(stc, v_table, mtd);
 
-        map<string, string>* localv_table = new map<std::string, std::string>(*v_table);
-        (*localv_table)[ident_.get_var()] = class_name_.get_var();
-        block_.type_inference(stc, localv_table, mtd);
+        map<std::string, std::string>* local_vtable = new map<std::string, std::string>(*v_table);
+        (*local_vtable)[ident_.get_var()] = class_name_.get_var();
+        block_.type_inference(stc, local_vtable, mtd);
         return "Nothing";
     }
 
@@ -127,8 +127,7 @@ namespace AST {
      std::string Actuals::gen_lvalue(GenContext *ctx){
             vector<string> actualregs = vector<string>();
             for (ASTNode *actual: elements_) {
-                std::string type = ctx->get_type(*actual);
-                std::string reg = ctx->alloc_reg(type);
+                std::string reg = ctx->alloc_reg(ctx->get_type(*actual));
                 actualregs.push_back(reg);
                 actual->gen_rvalue(ctx, reg);
             }
@@ -177,7 +176,6 @@ namespace AST {
     }
 
     void Call::gen_rvalue(GenContext *ctx, std::string target_reg) {
-
             string method_name = method_.get_var();
             string recv_tableype = ctx->get_type(receiver_);
             string recv_reg = ctx->alloc_reg(recv_tableype);
@@ -201,7 +199,6 @@ namespace AST {
                 stc->modified = 1; 
             } 
         }
-     
         std::string l_type = (*v_table)[l_var];
         std::string lca = stc->Type_LCA(l_type, r_type);
         if (l_type != lca) { 
@@ -264,9 +261,8 @@ namespace AST {
             AST_Type_Node class_entry = stc->AST_hierarchy[mtd->class_name];
             class_and_methods classandmethods = class_entry.methods[method_name];
             map<std::string, std::string>* method_vars = classandmethods.vars;
-            class_and_method* method_mtd = new class_and_method(mtd->class_name, method_name);
-            method->type_inference(stc, method_vars, method_mtd);
-            map<string, string> class_instance = class_entry.instance_vars;
+            method->type_inference(stc, method_vars, new class_and_method(mtd->class_name, method_name));
+            map<std::string, std::string> class_instance = class_entry.instance_vars;
             for(map<std::string, std::string>::iterator iter = method_vars->begin(); iter != method_vars->end(); iter++) {
                 if (class_instance.count(iter->first)) { 
                     string method_type = iter->second;
@@ -431,12 +427,11 @@ namespace AST {
     void ASTNode::json_head(string node_kind, ostream& out, AST_print_context& ctx) {
         json_indent(out, ctx);
         out << "{ \"kind\" : \"" << node_kind << "\"," ;
-        ctx.indent();  // one level more for children
+        ctx.indent(); 
         return;
     }
 
     void ASTNode::json_close(ostream& out, AST_print_context& ctx) {
-        // json_indent(out, ctx);
         out << "}";
         ctx.dedent();
     }
