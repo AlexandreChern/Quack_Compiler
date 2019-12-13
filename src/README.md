@@ -1,4 +1,16 @@
-# Quack-parser/src
+# Quack_Compiler/src
 
-This directory is for hand-written files.  It may contain some generated files (e.g., quack.tab.hxx) during the build process, but they should be removed by "make clean". 
+To make;
+make;
 
+Clean generated files;
+make clean;
+
+
+The compiled binary file will be in ../bin/ with the name parser
+
+For parser
+
+./parser  ../samples/*qk will compile and generate a c version of the code to quack_output.c file
+
+use quack.sh to compile the C files to executable binary files
