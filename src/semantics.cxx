@@ -11,18 +11,18 @@ using namespace std;
 
 class class_and_methods {
     public:
-        string method_name;
-        string return_type;
+        std::string method_name;
+        std::string return_type;
         vector<std::string> formal_arg_types;
-        map<string, string>* vars;
-        string inheritence;
+        map<std::string, std::string>* vars;
+        std::string inheritence;
 
         class_and_methods () {
             formal_arg_types = vector<std::string>();
-            vars = new map<string, string>();
+            vars = new map<std::string, std::string>();
         }
 
-        class_and_methods(string name) {
+        class_and_methods(std::string name) {
             method_name = name;
             formal_arg_types = vector<std::string>();
             vars = new map<string, string>();
@@ -96,13 +96,13 @@ class semantics {
                 topological_sort_utils(node);
             }
         }
-        void topological_sort_utils(AST_Type_Node* node) {
-            if (!node->resolved) {
-                std::string parent_type = node->parent_type;
+        void topological_sort_utils(AST_Type_Node* AST_node) { // recursive util function called in topological_sort()
+            if (!AST_node->resolved) {
+                std::string parent_type = AST_node->parent_type;
                 AST_Type_Node* parent_node = &AST_hierarchy[parent_type];
                 topological_sort_utils(parent_node);
-                resolved_classes.push_back(node->type);
-                node->resolved = 1;
+                resolved_classes.push_back(AST_node->type);
+                AST_node->resolved = 1;
             }
         }
 
@@ -131,14 +131,15 @@ class semantics {
             for (std::string child: AST_root_edge->children) {
                 AST_Edge* child_edge = edges[child];
                 if (child_edge->visited || is_AST_cyclic(child)) { 
+                    std::cout << "Cyclic AST detected" << std::endl;
                     return 1;
-                    std::cout << "Cyclic AST detected" << endl;
                 }
             }
             return 0;
         }
 
         void pop_AST_hierarchy() { 
+            sort_AST_Builtins();
             AST::Program *AST_root = (AST::Program*) AST_root_init;
             AST::Classes classes_node = AST_root->classes_;
             vector<AST::Class *> classes = classes_node.elements_;
@@ -294,7 +295,7 @@ class semantics {
             return &this->AST_hierarchy;
         }
 
-        void pop_AST_Builtins() {
+        void sort_AST_Builtins() {
             AST_Type_Node program("PGM");
             program.parent_type = "Obj";
             AST_hierarchy["PGM"] = program;
