@@ -44,19 +44,20 @@ class AST_Type_Node {
         AST_Type_Node() {
             instance_vars = map<std::string, std::string>();
             methods = map<std::string, class_and_methods>();
+            method_list = vector<std::string>();
             construct = class_and_methods();
             resolved = 0;
-            method_list = vector<std::string>();
+            
         }
 
         AST_Type_Node(std::string type_name) {
             type = type_name;
             instance_vars = map<std::string, std::string>();
             methods = map<std::string, class_and_methods>();
+            method_list = vector<std::string>();
             construct = class_and_methods(type_name);
             construct.return_type = type_name;
             resolved = 0;
-            method_list = vector<std::string>();
         }
 };
 
@@ -113,7 +114,7 @@ class semantics {
             }
             for(map<string,AST_Type_Node>::iterator iter = AST_hierarchy.begin(); iter != AST_hierarchy.end(); iter++) {
                 AST_Type_Node node = iter->second;
-                string parent_type = node.parent_type;
+                std::string parent_type = node.parent_type;
                 if (iter->first == "Obj") {
                     continue;
                 }
@@ -195,8 +196,8 @@ class semantics {
             } 
         } 
 
-        int method_found(vector<std::string>* method_list, string target_method) {
-            for (string method: *method_list) {
+        int method_found(vector<std::string>* method_list, std::string target_method) {
+            for (std::string method: *method_list) {
                 if (method == target_method) { 
                     return 1; 
                 }
@@ -237,7 +238,7 @@ class semantics {
             while (true) {
                 type_list.insert(tmp_type);
                 if (type_1 == "Obj") { break; return 0;}
-                tmp_type = AST_hierarchy[tmp_type].parent_type; // recursively going up though the AST tree
+                tmp_type = AST_hierarchy[tmp_type].parent_type; // recursively going up through the AST tree
                 if (type_list.count(type_2)){
                     cout << "type_1 is a subtype of " << type_2;
                     return 1; 
