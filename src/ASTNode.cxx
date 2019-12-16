@@ -1,6 +1,10 @@
 //
 // Created by Michal Young on 9/12/18.
 //
+// For some Type Inference Implementations, I referenced implementations of Zayd Hammoudeh, Amie Corso, Nate Letz
+// Type Inference for Classes is not done because I can't truly understand other implementations
+// For Code Generation Implementations, I mainly referenced examples by Michal Young 
+//
 
 #include "ASTNode.h"
 #include "semantics.h"
@@ -59,7 +63,10 @@ namespace AST {
             AST_Type_Node class_node = stc->AST_hierarchy[mtd->class_name];
             map<std::string, std::string> instance_vars = class_node.instance_vars;
             if (instance_vars.count(text_)) {return instance_vars[text_];}
-            else { return "TypeError";}
+            else { 
+                std::cout << "Type Inference Error: Ident" << std::endl;
+                return "TypeError";
+            }
         }
         if (!v_table->count(text_)) { 
             cout << "Type Inference Error: Ident" << endl;
@@ -83,7 +90,8 @@ namespace AST {
         std::string l_id = left_.get_var();
         map<string, string> instance_vars = class_node.instance_vars;
         if (!instance_vars.count(r_id)) {
-            return "Type Inference Error: Dot";
+            std::cout << "Type Inference Error: Dot" << std::endl;
+            return "TypeError";
         }
         return instance_vars[r_id];
     }    
@@ -176,7 +184,7 @@ namespace AST {
         }
     
     int If::init_check(set<std::string>* vars) {
-            if (cond_.init_check(vars)) {return 1;}
+            if (cond_.init_check(vars) || truepart_.init_check(vars) || falsepart_.init_check(vars)) {return 1;}
             // Not complete
             return 0;
         }  
@@ -190,22 +198,22 @@ namespace AST {
         map<std::string, AST_Type_Node> AST_hierarchy = stc->AST_hierarchy;
         AST_Type_Node receiver_node = AST_hierarchy[receiver_type];
         map<std::string, class_and_methods> methods = receiver_node.methods;
-        // Not Implemented
+        // Not complete
         return methods[method_name].return_type;    
     }
 
     void Call::gen_rvalue(GenContext *ctx, std::string target_reg) {
             std::string method_name = method_.get_var();
-            std::string recv_tableype = ctx->get_type(receiver_);
-            std::string recv_reg = ctx->alloc_reg(recv_tableype);
+            std::string recv_type = ctx->get_type(receiver_);
+            std::string recv_reg = ctx->alloc_reg(recv_type);
             receiver_.gen_rvalue(ctx, recv_reg);
             string actuals = actuals_.gen_lvalue(ctx);
             ctx->emit(target_reg + " = " + recv_reg + "->clazz->" + method_name + "(" + recv_reg + ", " + actuals + ");");
         }
 
     void Call::gen_branch(GenContext *ctx, string true_branch, string false_branch){
-            string mytype = ctx->get_type(*this);
-            string reg = ctx->alloc_reg(mytype);
+            std::string method_type = ctx->get_type(*this);
+            std::string reg = ctx->alloc_reg(method_type);
             gen_rvalue(ctx, reg);
             ctx->emit(string("if (") + reg + ") goto " + true_branch + ";");
             ctx->emit(string("goto ") + false_branch + ";");
@@ -232,7 +240,7 @@ namespace AST {
     }
 
     int Assign::init_check(set<std::string>* vars) {
-            if (rexpr_.init_check(vars)) { return 1; }
+            if (rexpr_.init_check(vars) || lexpr_.init_check(vars)) { return 1; }
             vars->insert(lexpr_.get_var());
             return 0;
         }    
@@ -273,7 +281,7 @@ namespace AST {
     string Methods::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd) {
 
         for (Method* method: elements_) {
-            string method_name = method->name_.get_var();
+            std::string method_name = method->name_.get_var();
             AST_Type_Node class_entry = stc->AST_hierarchy[mtd->class_name];
             class_and_methods classandmethods = class_entry.methods[method_name];
             map<std::string, std::string>* method_vars = classandmethods.vars;
@@ -284,7 +292,7 @@ namespace AST {
                     std::string method_type = iter->second;
                     std::string class_type = class_instance[iter->first];
                     if (!stc->is_subtype(method_type, class_type)) {
-                        cout << "Type Inference Error: Methods" << endl;
+                        std::cout << "Type Inference Error: Methods" << std::endl;
                     }
                 }
             }

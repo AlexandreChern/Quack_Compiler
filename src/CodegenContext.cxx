@@ -71,7 +71,7 @@ std::string GenContext::get_local_var(std::string &ident) {
         local_vars[ident] = local_var;
         AST_Type_Node class_node = stc->AST_hierarchy[class_name];
         class_and_methods classandmethods;
-        map<string, string>* vars;
+        map<std::string, std::string>* vars;
         if (method_name == "constructor" || method_name == class_name) {
             classandmethods = class_node.construct;
             vars = classandmethods.vars;
@@ -81,14 +81,14 @@ std::string GenContext::get_local_var(std::string &ident) {
             vars = classandmethods.vars;
         }
         std::string var_type = (*vars)[ident];
-        this->emit(string("obj_") + var_type + " " + local_var + ";");
+        this->emit(std::string("obj_") + var_type + " " + local_var + ";");
         return local_var;
     }
     return local_vars[ident];
 }
 
 std::string GenContext::new_branch_label(const char* prefix) {
-    return std::string(prefix) + "_" + to_string(++next_label_num);
+    return std::string(prefix) + std::string("_") + to_string(++next_label_num);
 }
 
 void GenContext::emit_instance_vars() {
