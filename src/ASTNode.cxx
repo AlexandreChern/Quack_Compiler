@@ -57,7 +57,7 @@ namespace AST {
     std::string Ident::type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) {
         if (text_ == "this") {
             AST_Type_Node class_node = stc->AST_hierarchy[mtd->class_name];
-            map<string, string> instance_vars = class_node.instance_vars;
+            map<std::string, std::string> instance_vars = class_node.instance_vars;
             if (instance_vars.count(text_)) {return instance_vars[text_];}
             else { return "TypeError";}
         }
@@ -78,10 +78,9 @@ namespace AST {
 
     std::string Dot::type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) { 
         std::string l_type = left_.type_inference(stc, v_table, mtd); 
-        right_.type_inference(stc, v_table, mtd);
+        AST_Type_Node class_node = stc->AST_hierarchy[l_type];
         std::string r_id = right_.get_var();
         std::string l_id = left_.get_var();
-        AST_Type_Node class_node = stc->AST_hierarchy[l_type];
         map<string, string> instance_vars = class_node.instance_vars;
         if (!instance_vars.count(r_id)) {
             return "Type Inference Error: Dot";
@@ -89,7 +88,7 @@ namespace AST {
         return instance_vars[r_id];
     }    
 
-     void Dot::gen_rvalue(GenContext *ctx, std::string target_reg)  {
+    void Dot::gen_rvalue(GenContext *ctx, std::string target_reg)  {
             std::string var = get_var();
             std::string loc = ctx->get_local_var(var);
             ctx->emit(target_reg + " = " + loc + ";");
@@ -139,14 +138,14 @@ namespace AST {
     }
 
      std::string Actuals::gen_lvalue(GenContext *ctx){
-            vector<string> actualregs = vector<string>();
-            for (ASTNode *actual: elements_) {
-                std::string reg = ctx->alloc_reg(ctx->get_type(*actual));
-                actualregs.push_back(reg);
-                actual->gen_rvalue(ctx, reg);
-            }
-            string actuals = "";
-            for (string reg: actualregs) {
+        vector<std::string> actual_regs = vector<string>();
+        for (ASTNode *actual: elements_) {
+            std::string reg = ctx->alloc_reg(ctx->get_type(*actual));
+            actual_regs.push_back(reg);
+            actual->gen_rvalue(ctx, reg);
+        }
+        std::string actuals = " ";
+            for (std::string reg: actual_regs) {
                 actuals = actuals + reg + ", ";
             }
             actuals = actuals.erase(actuals.length() - 2, 2); 
@@ -204,21 +203,21 @@ namespace AST {
             ctx->emit(target_reg + " = " + recv_reg + "->clazz->" + method_name + "(" + recv_reg + ", " + actuals + ");");
         }
 
+    void Call::gen_branch(GenContext *ctx, string true_branch, string false_branch){
+            string mytype = ctx->get_type(*this);
+            string reg = ctx->alloc_reg(mytype);
+            gen_rvalue(ctx, reg);
+            ctx->emit(string("if (") + reg + ") goto " + true_branch + ";");
+            ctx->emit(string("goto ") + false_branch + ";");
+            ctx->free_reg(reg);
+        }
+
     string AssignDeclare::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd)  {
         lexpr_.type_inference(stc, v_table, mtd);
         std::string r_type = rexpr_.type_inference(stc, v_table, mtd);
         std::string l_var = lexpr_.get_var();
         std::string static_type = static_type_.get_var();
         map<string, string> instance_vars = (stc->AST_hierarchy)[mtd->class_name].instance_vars;
-        if (!v_table->count(l_var)) { 
-            if (instance_vars.count(l_var)) { 
-                (*v_table)[l_var] = instance_vars[l_var]; 
-            }
-            else { 
-                (*v_table)[l_var] = static_type; 
-                stc->modified = 1; 
-            } 
-        }
         std::string l_type = (*v_table)[l_var];
         std::string lca = stc->Type_LCA(l_type, r_type);
         if (l_type != lca) { 
@@ -238,24 +237,15 @@ namespace AST {
             return 0;
         }    
 
-    string Assign::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd)  {
+    std::string Assign::type_inference(semantics* stc, map<string, string>* v_table, class_and_method* mtd)  {
         lexpr_.type_inference(stc, v_table, mtd);
         std::string r_type = rexpr_.type_inference(stc, v_table, mtd);
         std::string l_var = lexpr_.get_var();
-        map<string, string> instance_vars = (stc->AST_hierarchy)[mtd->class_name].instance_vars;
-        if (!v_table->count(l_var)) { 
-            if (instance_vars.count(l_var)) { 
-                (*v_table)[l_var] = instance_vars[l_var]; 
-            }
-            else { 
-                (*v_table)[l_var] = r_type; 
-                stc->modified = 1; 
-            } 
-        }
+        map<std::string, std::string> instance_vars = (stc->AST_hierarchy)[mtd->class_name].instance_vars;
         std::string l_type = (*v_table)[l_var];
-        std::string lca = stc->Type_LCA(l_type, r_type);
-        if (l_type != lca) { 
-            (*v_table)[l_var] = lca;
+        std::string LCA = stc->Type_LCA(l_type, r_type);
+        if (l_type != LCA) { 
+            (*v_table)[l_var] = LCA;
             stc->modified = 1;
         }
         return "Nothing";
@@ -291,8 +281,8 @@ namespace AST {
             map<std::string, std::string> class_instance = class_entry.instance_vars;
             for(map<std::string, std::string>::iterator iter = method_vars->begin(); iter != method_vars->end(); iter++) {
                 if (class_instance.count(iter->first)) { 
-                    string method_type = iter->second;
-                    string class_type = class_instance[iter->first];
+                    std::string method_type = iter->second;
+                    std::string class_type = class_instance[iter->first];
                     if (!stc->is_subtype(method_type, class_type)) {
                         cout << "Type Inference Error: Methods" << endl;
                     }
@@ -355,20 +345,20 @@ namespace AST {
     std::string And::type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd){
             string left_type = left_.type_inference(stc, v_table, mtd);
             string right_type = right_.type_inference(stc, v_table, mtd);
-            if (left_type != "Boolean" || right_type != "Boolean") {return "And:TypeError";}
+            if (left_type != "Boolean" || right_type != "Boolean") {return "Type Inference Error: And";}
             return "Boolean";
         }
 
     std::string Or::type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) {
             string left_type = left_.type_inference(stc, v_table, mtd);
             string right_type = right_.type_inference(stc, v_table, mtd);
-            if (left_type != "Boolean" || right_type != "Boolean") {return "Or:TypeError";}
+            if (left_type != "Boolean" || right_type != "Boolean") {return "Type Inference Error: Or";}
             return "Boolean";
         }
 
      std::string Not::type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd){
             string left_type = left_.type_inference(stc, v_table, mtd);
-            if (left_type != "Boolean") {return "Not:TypeError";}
+            if (left_type != "Boolean") {return "Type Inference Error: Not";}
             return "Boolean";
         }
 

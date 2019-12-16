@@ -20,8 +20,8 @@ public:
     string method_name;
     semantics* stc;
 
-    explicit GenContext(ostream &out, semantics* ss, string clsname, string methname) : 
-        object_code{out}, stc{ss}, class_name{clsname}, method_name{methname} {};
+    explicit GenContext(ostream &out, semantics* stx, std::string clazzname, std::string methodname) : 
+        object_code{out}, stc{stx}, class_name{clazzname}, method_name{methodname} {};
 
     void emit(std::string s);
 

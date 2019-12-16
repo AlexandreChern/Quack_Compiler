@@ -424,24 +424,15 @@ namespace AST {
         Ident& method_;         /* Identifier of the method */
         Actuals& actuals_;     /* List of actual arguments */
     public:
-        void gen_branch(GenContext *ctx, string true_branch, string false_branch) override {
-
-            string mytype = ctx->get_type(*this);
-            string reg = ctx->alloc_reg(mytype);
-            gen_rvalue(ctx, reg);
-            ctx->emit(string("if (") + reg + ") goto " + true_branch + ";");
-            ctx->emit(string("goto ") + false_branch + ";");
-            ctx->free_reg(reg);
-        }
+        void gen_branch(GenContext *ctx, string true_branch, string false_branch) override ;
+        
         void gen_rvalue(GenContext *ctx, string target_reg) override;
 
         explicit Call(Expr& receiver, Ident& method, Actuals& actuals) :
                 receiver_{receiver}, method_{method}, actuals_{actuals} {};
         string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override;
         int init_check(set<string>* vars) override {
-            if (receiver_.init_check(vars)) { return 1;}
-            if (method_.init_check(vars)) { return 1;}
-            if (actuals_.init_check(vars)) { return 1;}
+            if (receiver_.init_check(vars) || method_.init_check(vars) || actuals_.init_check(vars) ) { return 1;}
             return 0;
         }
 
@@ -451,7 +442,7 @@ namespace AST {
 
    class BinOp : public Expr {
     protected:
-        string opsym;
+        std::string opsym;
         ASTNode &left_;
         ASTNode &right_;
         BinOp(string sym, ASTNode &l, ASTNode &r) :
@@ -467,8 +458,7 @@ namespace AST {
         std::string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override; 
         
         int init_check(set<string>* vars) override {
-            if (left_.init_check(vars)) { return 1;}
-            if (right_.init_check(vars)) { return 1;}
+            if (left_.init_check(vars) || right_.init_check(vars)) { return 1;}
             return 0;
         }
    };
@@ -480,8 +470,7 @@ namespace AST {
         string type_inference(semantics* stc, map<std::string, std::string>* v_table, class_and_method* mtd) override;
         
         int init_check(set<string>* vars) override {
-            if (left_.init_check(vars)) { return 1;}
-            if (right_.init_check(vars)) { return 1;}
+            if (left_.init_check(vars) || right_.init_check(vars)) { return 1;}
             return 0;
         }
     };
